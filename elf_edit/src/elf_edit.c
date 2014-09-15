@@ -14,6 +14,8 @@
 #include <fcntl.h>
 #include <unistd.h>
 
+#include <elf.h>
+
 int main( void )
 {
 	int fd = -1;
