@@ -1,0 +1,6 @@
+.metadata/*
+RemoteSystemsTempFiles/*
+elf_edit/Debug/*
+simple/Debug/*
+*/.cproject
+*/.project
