@@ -19,10 +19,14 @@
 int main( void )
 {
 	int fd = -1;
-	char* elf_content = NULL;
+	char* p_elf_content = NULL;
 	off_t size = 0;
 	off_t temp = 0;
 	ssize_t num_of_read_byte = 0;
+
+	Elf64_Ehdr* p_elf_header = NULL;
+	Elf64_Shdr* p_sec_header_table_entry = NULL;
+	Elf64_Sym*  p_sym_table_entry = NULL;
 
 	fd = open( "/home/afi/workspace_elf_injection/simple/Debug/simple", O_RDWR );
 	if( fd == -1 )
@@ -50,29 +54,59 @@ int main( void )
 	printf( "size = %ld\n", size );
 
 	// allocate memory in RAM for elf file
-	elf_content = calloc( 1, size );
-	if( !elf_content )
+	p_elf_content = calloc( 1, size );
+	if( !p_elf_content )
 	{
 		printf( "error while calloc call.\n" );
 		return EXIT_FAILURE;
 	}
 
-	num_of_read_byte = read( fd, elf_content, size );
+	num_of_read_byte = read( fd, p_elf_content, size );
 	if( num_of_read_byte == -1 )
 	{
 		perror( NULL );
 		return EXIT_FAILURE;
 	}
 
-	// for debug purpose
-	printf( "%c%c%c\n", elf_content[1], elf_content[2], elf_content[3] );
-
 	//---------------------------------------------------------------------------------
 
-	char* ptr = strstr( elf_content, "func_1" );
+	p_elf_header = (Elf64_Ehdr*)p_elf_content;
+	if(
+		( p_elf_header->e_ident[0] != ELFMAG0 ) || ( p_elf_header->e_ident[1] != ELFMAG1 ) ||
+		( p_elf_header->e_ident[2] != ELFMAG2 ) || ( p_elf_header->e_ident[3] != ELFMAG3 )
+	  )
+	{
+		printf( "it's not an elf file. (signature of elf file: 0x7f 0x45 0x4c 0x46)\n" );
+		return EXIT_FAILURE;
+	}
 
-	if( ptr )
-	  printf( "%s\n", ptr );
+	printf( "%c%c%c\n", p_elf_header->e_ident[1], p_elf_header->e_ident[2], p_elf_header->e_ident[3] );
+
+	// obtain pointer to first(0) section header table entry (to first(0) section header)
+	p_sec_header_table_entry = (Elf64_Shdr*)( p_elf_content + p_elf_header->e_shoff );
+
+	// we want to get information from .symtab section, so now p_sec_header_table_entry points to
+	//.symtab section header
+	p_sec_header_table_entry += 34;
+
+	// obtain pointer to section .symtab (to first(0) symtab entry)
+	p_sym_table_entry = (Elf64_Sym*)( p_elf_content + p_sec_header_table_entry->sh_offset );
+
+	//----------------
+
+	// obtain pointer to first(0) section header table entry (to first(0) section header)
+	p_sec_header_table_entry = (Elf64_Shdr*)( p_elf_content + p_elf_header->e_shoff );
+	p_sec_header_table_entry += 33;
+	printf( "kk: %s\n", (char*)( p_elf_content + p_sec_header_table_entry->sh_offset ) );
+
+
+	Elf64_Off offset =  p_elf_header->e_shstrndx * p_elf_header->e_shentsize + p_elf_header->e_shoff;
+
+	/*
+	for(;;)
+	{
+		if(p_sym_table_entry->st_name)
+	}*/
 
 	return EXIT_SUCCESS;
 }
